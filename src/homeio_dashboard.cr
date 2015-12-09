@@ -1,5 +1,5 @@
 require "./homeio_dashboard/*"
+require "./homeio_dashboard/modules/*"
 
 module HomeioDashboard
-  # TODO Put your code here
 end

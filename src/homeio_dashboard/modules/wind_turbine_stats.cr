@@ -6,6 +6,9 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
   def initialize(l)
     @logger = l
 
+    @name = "WindTurbine"
+    @enabled = false
+
     @host = "http://localhost:8080"
     @meas_path = "/api/meas.json"
 
@@ -23,7 +26,11 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
     @initial_count = 2 # how many initial hours calculate
 
     @powers = [] of Tuple(Time, Float64)
+
+    @updated_at = Time.now
   end
+
+  getter :name
 
   def load_config(path)
     s = File.read(path)
@@ -31,19 +38,24 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
     @host = data["host"].to_s if data.has_key?("host")
 
     @initial_count = data["initial_count"].to_s.to_i if data.has_key?("initial_count")
+    @enabled = data["enabled"].to_s == "true" if data.has_key?("enabled")
   end
 
   property :host
 
 
   def prepare
+    return unless @enabled
+
     get_meas
-    @logger.info("WindTurbine prepared, got meas")
+    @logger.info("#{@name} prepared, got meas")
     populate_initial_energies
-    @logger.info("WindTurbine populated initials")
+    @logger.info("#{@name} populated initials")
   end
 
   def make_it_so
+    return unless @enabled
+
     return populate_energy_for_hour_ago(1)
   end
 
@@ -60,16 +72,19 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
   def populate_energy_for_hour(t)
     return false if @powers.size > 0 && @powers.last[0] == t
 
-    @logger.info("WindTurbine getting power for #{t}")
+    @logger.info("#{@name} getting power for #{t}")
     power = get_power(t, t + Time::Span.new(1, 0, 0) )
     power /= 3600.0
-    @logger.info("WindTurbine got #{power} Wh")
+    @logger.info("#{@name} got #{power} Wh")
 
     @powers << {t, power}
 
     @powers = @powers.select{|p| (Time.now - p[0] as Time) <= Time::Span.new(48, 0, 0) }
   end
 
+  def payload
+    {"powers" => @powers}
+  end
 
   def get_meas
     s = HTTP::Client.get(@host + @meas_path)
@@ -99,14 +114,14 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
 
     @interval = data["interval"].to_s.to_i
 
-    @logger.debug("WindTurbine got voltages count #{array_u.size}")
+    @logger.debug("#{@name} got voltages count #{array_u.size}")
 
     url = url_for_meas_raws(@current_meas_name, time_from, time_to)
     s = HTTP::Client.get(url)
     data = JSON.parse(s.body) as Hash(String, JSON::Type)
     array_i = data["data"] as Array(JSON::Type)
 
-    @logger.debug("WindTurbine got currents count #{array_i.size}")
+    @logger.debug("#{@name} got currents count #{array_i.size}")
 
     i = 0
     power = 0.0
@@ -120,13 +135,24 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
       i += 1
     end
 
-    @logger.debug("WindTurbine power calculated #{power} Ws")
+    @logger.debug("#{@name} power calculated #{power} Ws")
 
     return power # in Ws, you need to divide 1000 * 3600 if you want kWh
   end
 
   def url_for_meas_raws(meas_name, time_from, time_to)
     "#{@host}/api/meas/#{meas_name}/raw_for_time/#{(time_from.epoch_f * 1000.0).to_i64}/#{(time_to.epoch_f * 1000.0).to_i64}/.json"
+  end
+
+  def content
+    s = ""
+
+    @powers.reverse.each do |p|
+      s += "#{p[0]} - #{p[1]} Wh"
+      s += "\n"
+    end
+
+    return s
   end
 
 end

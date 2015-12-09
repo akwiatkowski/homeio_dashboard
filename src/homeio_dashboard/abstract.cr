@@ -2,6 +2,12 @@ require "http"
 require "json"
 
 abstract class HomeioDashboard::Abstract
+  getter :name, :updated_at
+
+  def initialize
+    @updated_at = Time.now
+  end
+
   def prepare
   end
 
@@ -13,4 +19,13 @@ abstract class HomeioDashboard::Abstract
 
   def payload
   end
+
+  def payload
+    return Hash(String, String)
+  end
+
+  def content
+    return ""
+  end
+
 end

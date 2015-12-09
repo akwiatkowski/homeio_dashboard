@@ -4,3 +4,5 @@
 /.shards/
 
 config
+bin/1.cr
+www/payload.json
