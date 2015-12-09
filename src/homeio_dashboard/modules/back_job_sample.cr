@@ -23,7 +23,8 @@ class HomeioDashboard::BackJobSample < HomeioDashboard::Abstract
   end
 
   def content
+    @logger.info "test"
+
     return "Sample auto increment #{@i}, #{@updated_at.to_s}"
   end
-
 end

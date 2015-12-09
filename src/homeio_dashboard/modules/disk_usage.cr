@@ -28,12 +28,13 @@ class HomeioDashboard::DiskUsage < HomeioDashboard::Abstract
       drive = s.gsub(/\s{2,50}/, " ").split(/\s+/) as Array(String)
 
       unless drive[0].to_s == "tmpfs"
-        @disk_usages << {drive[5].to_s, drive[1].to_s.to_i64, drive[2].to_s.to_i64, 100.0 * drive[2].to_s.to_f / drive[1].to_s.to_f }
+        @disk_usages << {drive[5].to_s, drive[1].to_s.to_i64, drive[2].to_s.to_i64, 100.0 * drive[2].to_s.to_f / drive[1].to_s.to_f}
       end
     end
-    @updated_at = Time.now
 
     @disk_usages.uniq!
+
+    mark_updated
 
     return @disk_usages
   end
@@ -68,11 +69,9 @@ class HomeioDashboard::DiskUsage < HomeioDashboard::Abstract
 
       s += "#{d[3].round(1)} %".rjust(10)
 
-
       s += "\n"
     end
 
     return s
   end
-
 end

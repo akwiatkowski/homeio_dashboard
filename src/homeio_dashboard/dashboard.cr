@@ -6,15 +6,17 @@ class HomeioDashboard::Dashboard
   def initialize
     @io = MemoryIO.new(1024 * 64)
     @logger = Logger.new(@io)
+    #@logger = Logger.new(File.new("log.log", "w"))
+
     @logger.formatter = Logger::Formatter.new do |severity, datetime, progname, message, io|
-                          io << severity[0] << ", [" << datetime.to_s("%H:%M:%S.%L") << "] "
-                          io << severity.rjust(5) << ": " << message
-                        end
+      io << severity[0] << ", [" << datetime.to_s("%H:%M:%S.%L") << "] "
+      io << severity.rjust(5) << ": " << message
+    end
     @logger.level = Logger::DEBUG
 
     @modules = [] of HomeioDashboard::Abstract
 
-    #menu
+    # menu
     NCurses.init
     NCurses.raw
     NCurses.no_echo
@@ -26,10 +28,13 @@ class HomeioDashboard::Dashboard
 
     @cursor = 0
     @enabled = true
+    @last_refresh = Time.now
+    @auto_refresh_every = 1.0
 
     # default home
     w = HomeioDashboard::Home.new(@logger)
     w.io = @io
+    w.max_height = @max_height
     add_module(w)
   end
 
@@ -65,17 +70,6 @@ class HomeioDashboard::Dashboard
     f.close
   end
 
-  def start_menu
-    begin
-      while @enabled
-        refresh
-        wait_for_input
-      end
-    ensure
-      NCurses.end_win
-    end
-  end
-
   def current_module
     @modules[@cursor].name
   end
@@ -91,6 +85,14 @@ class HomeioDashboard::Dashboard
   def refresh
     render_menu
     render_content
+
+    @last_refresh = Time.now
+  end
+
+  def auto_refresh
+    if (Time.now - @last_refresh).to_f > @auto_refresh_every
+      refresh
+    end
   end
 
   def menu_header
@@ -114,46 +116,67 @@ class HomeioDashboard::Dashboard
   def move_cursor(offset)
     return unless 0 <= @cursor + offset < @modules.size
     @cursor += offset
-    # force refresh
   end
 
   def wait_for_input
-    @menu.on_input do |char, modifier|
-      case char
-      when :escape then
-        @enabled = false
-      when 'q' then
-        @enabled = false
+    @menu.timeout = 0.2
+    char = @menu.get_char
+    case char
+    when 65 then
+      move_cursor(-1)
+      refresh
+    when 66 then
+      move_cursor(1)
+      refresh
+    when 'q' then
+      @enabled = false
+    #when 27 then # esc
+    #  @enabled = false
+    else
+    # nothing
 
-      when :up then
-        move_cursor(-1)
-      when :down then
-        move_cursor(1)
+    end
+  end
 
-      else
-        # nothing
+  def start_menu_thread
+    future do
+      refresh
+
+      loop do
+        wait_for_input
+        auto_refresh
+        sleep 0.03
       end
     end
   end
 
-  def start
-    prepare
-
+  def start_back_thread
     future do
-      start_menu
-    end
+      prepare
 
-    future do
       loop do
+        @logger.debug "Back thread loop"
+
         run_all
         save_payload
-        sleep 5
+        sleep 1
       end
     end
+  end
 
+  def enabled_loop
     while @enabled
       sleep 1
     end
   end
 
+  def start
+    begin
+      start_menu_thread
+      start_back_thread
+      enabled_loop
+    ensure
+      NCurses.end_win
+    end
+  end
 end

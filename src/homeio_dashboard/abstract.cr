@@ -4,7 +4,7 @@ require "json"
 abstract class HomeioDashboard::Abstract
   getter :name, :updated_at
 
-  def initialize
+  def initialize(l)
     @updated_at = Time.now
   end
 
@@ -28,4 +28,8 @@ abstract class HomeioDashboard::Abstract
     return ""
   end
 
+  def mark_updated
+    @updated_at = Time.now
+    @logger.debug "#{self.name} updated"
+  end
 end

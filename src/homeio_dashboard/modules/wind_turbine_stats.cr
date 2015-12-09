@@ -43,7 +43,6 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
 
   property :host
 
-
   def prepare
     return unless @enabled
 
@@ -66,20 +65,20 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
   end
 
   def populate_energy_for_hour_ago(i)
-    populate_energy_for_hour( Time.now.at_beginning_of_hour - Time::Span.new(i, 0, 0) )
+    populate_energy_for_hour( (Time.now.at_beginning_of_hour - Time::Span.new(i, 0, 0)).to_local )
   end
 
   def populate_energy_for_hour(t)
     return false if @powers.size > 0 && @powers.last[0] == t
 
     @logger.info("#{@name} getting power for #{t}")
-    power = get_power(t, t + Time::Span.new(1, 0, 0) )
+    power = get_power(t, t + Time::Span.new(1, 0, 0))
     power /= 3600.0
     @logger.info("#{@name} got #{power} Wh")
 
     @powers << {t, power}
 
-    @powers = @powers.select{|p| (Time.now - p[0] as Time) <= Time::Span.new(48, 0, 0) }
+    @powers = @powers.select { |p| (Time.now - p[0] as Time) <= Time::Span.new(48, 0, 0) }
   end
 
   def payload
@@ -103,7 +102,6 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
         @current_meas_coeff_offset = meas["coefficientOffset"].to_s.to_i
       end
     end
-
   end
 
   def get_power(time_from = Time.now.at_beginning_of_day, time_to = Time.now.at_end_of_day)
@@ -129,7 +127,7 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
       voltage = (array_u[i].to_s.to_i + @voltage_meas_coeff_offset) * @voltage_meas_coeff_linear
       current = (array_i[i].to_s.to_i + @current_meas_coeff_offset) * @current_meas_coeff_linear
 
-      quant = voltage * current *  @interval * 0.001
+      quant = voltage * current * @interval * 0.001
       power += quant if quant > 0.0
 
       i += 1
@@ -154,5 +152,4 @@ class HomeioDashboard::WindTurbineStats < HomeioDashboard::Abstract
 
     return s
   end
-
 end
