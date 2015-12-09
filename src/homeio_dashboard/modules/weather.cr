@@ -138,6 +138,7 @@ class HomeioDashboard::Weather < HomeioDashboard::Abstract
       s += "#{( (w[2]) / 1000.0).round(1)} km".rjust(13)
       s += "#{w[3].to_s("%H:%M:%S")}".rjust(15)
       s += "#{w[4]} C".rjust(10)
+      s += "#{w[5].round(1)} m/s".rjust(10)
       s += "\n"
     end
 
