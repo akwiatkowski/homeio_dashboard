@@ -12,4 +12,8 @@ w = HomeioDashboard::WindTurbineStats.new(d.logger)
 w.load_config("config/wind_turbine.yml")
 d.add_module(w)
 
+w = HomeioDashboard::Weather.new(d.logger)
+w.load_config("config/weather.yml")
+d.add_module(w)
+
 d.start

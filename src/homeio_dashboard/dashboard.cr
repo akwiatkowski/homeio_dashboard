@@ -71,15 +71,19 @@ class HomeioDashboard::Dashboard
   end
 
   def current_module
-    @modules[@cursor].name
+    @modules[@cursor]
+  end
+
+  def current_module_name
+    current_module.name
   end
 
   def current_content
-    @modules[@cursor].content
+    current_module.content
   end
 
   def current_updated_at
-    @modules[@cursor].updated_at as Time
+    current_module.updated_at as Time
   end
 
   def refresh
@@ -96,7 +100,7 @@ class HomeioDashboard::Dashboard
   end
 
   def menu_header
-    s = "HomeIO: #{current_module}"
+    s = "HomeIO: #{current_module_name}"
     s += "#{@cursor + 1}/#{@modules.size} | #{current_updated_at.to_s("%H:%M:%S")}".rjust(@max_width - s.size)
     return s
   end
@@ -133,7 +137,9 @@ class HomeioDashboard::Dashboard
     #when 27 then # esc
     #  @enabled = false
     else
-    # nothing
+      # if return true, then must update
+      result = current_module.send_key(char)
+      refresh if result
 
     end
   end

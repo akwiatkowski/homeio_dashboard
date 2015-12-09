@@ -32,4 +32,8 @@ abstract class HomeioDashboard::Abstract
     @updated_at = Time.now
     @logger.debug "#{self.name} updated"
   end
+
+  def send_key(char)
+    return false
+  end
 end
